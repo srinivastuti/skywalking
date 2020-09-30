@@ -75,4 +75,12 @@ export default class DummyContext implements Context {
   restore(snapshot: Snapshot) {
     // Big Bang ~
   }
+
+  async(span: Span): this {
+    return this;
+  }
+
+  await(span: Span): this {
+    return this;
+  }
 }

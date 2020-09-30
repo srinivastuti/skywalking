@@ -17,32 +17,19 @@
  *
  */
 
-import Span from '../../trace/span/Span';
-import Segment from '../../trace/context/Segment';
-import Snapshot from '../../trace/context/Snapshot';
-import { ContextCarrier } from './ContextCarrier';
+// @ts-ignore
+import agent from '../../../src/index';
 
-export default interface Context {
-  segment: Segment;
-  spans: Span[];
+agent.start({});
 
-  newLocalSpan(operation: string): Span;
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 
-  newEntrySpan(operation: string, carrier?: ContextCarrier): Span;
+const port = 5000;
 
-  newExitSpan(operation: string, peer: string, carrier?: ContextCarrier): Span;
+const server = createServer((request: IncomingMessage, response: ServerResponse) => {
+  setTimeout(() => response.end('How you doin'), 1000);
+});
 
-  start(span: Span): Context;
-
-  stop(span: Span): boolean;
-
-  async(span: Span): Context;
-
-  await(span: Span): Context;
-
-  currentSpan(): Span | undefined;
-
-  capture(): Snapshot;
-
-  restore(snapshot: Snapshot): void;
-}
+server.listen(port, () => {
+  console.log(`Server is listening on port ${port}`);
+});

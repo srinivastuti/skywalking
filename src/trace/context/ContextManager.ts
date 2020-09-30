@@ -25,19 +25,22 @@ class ContextManager {
   contextKeyedByAsyncId: { [asyncId: number]: Context } = {};
 
   constructor() {
-    createHook({
-      destroy: (asyncId: number) => {
-        delete this.contextKeyedByAsyncId[asyncId];
-      },
-    }).enable();
+    // createHook({
+    //   destroy: (asyncId: number) => {
+    //     delete this.contextKeyedByAsyncId[asyncId];
+    //   },
+    // }).enable();
   }
 
+  context = new SpanContext(1);
+
   get current(): Context {
-    const thisAsyncId = executionAsyncId();
-
-    this.contextKeyedByAsyncId[thisAsyncId] = this.contextKeyedByAsyncId[thisAsyncId] || new SpanContext(thisAsyncId);
-
-    return this.contextKeyedByAsyncId[thisAsyncId];
+    return this.context;
+    // const thisAsyncId = executionAsyncId();
+    //
+    // this.contextKeyedByAsyncId[thisAsyncId] = this.contextKeyedByAsyncId[thisAsyncId] || new SpanContext(thisAsyncId);
+    //
+    // return this.contextKeyedByAsyncId[thisAsyncId];
   }
 }
 

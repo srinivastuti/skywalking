@@ -37,6 +37,7 @@ export default class SpanContext implements Context {
   spanId = 0;
   spans: Span[] = [];
   segment: Segment = new Segment();
+  asyncSpans: Span[] = [];
 
   constructor(public asyncId: number) {}
 
@@ -122,8 +123,12 @@ export default class SpanContext implements Context {
       return true;
     }
 
-    if (this.tryFinish(span)) {
-      this.spans.splice(0, 1);
+    const finished = this.tryFinish(span);
+    if (finished) {
+      this.spans.splice(this.spans.indexOf(span), 1);
+    }
+    if (finished && this.asyncSpans.length === 0) {
+      buffer.put(this.segment);
     }
 
     return this.spans.length === 0;
@@ -134,7 +139,6 @@ export default class SpanContext implements Context {
       if (logger.isDebugEnabled()) {
         logger.debug('Finishing span', { span });
       }
-      buffer.put(this.segment);
       return true;
     }
     return false;
@@ -158,5 +162,22 @@ export default class SpanContext implements Context {
     this.segment.refer(ref);
     this.currentSpan()?.refer(ref);
     this.segment.relate(ref.traceId);
+  }
+
+  async(span: Span): this {
+    if (!this.asyncSpans.includes(span)) {
+      this.asyncSpans.push(span);
+    }
+    return this;
+  }
+
+  await(span: Span): this {
+    if (this.asyncSpans.includes(span)) {
+      this.asyncSpans.splice(this.asyncSpans.indexOf(span), 1);
+    }
+    if (this.asyncSpans.length === 0) {
+      buffer.put(this.segment);
+    }
+    return this;
   }
 }

@@ -58,6 +58,7 @@ export default abstract class Span {
   startTime = 0;
   endTime = 0;
   errored = false;
+  _async = false;
 
   constructor(options: SpanCtorOptions & { type: SpanType }) {
     this.context = options.context;
@@ -139,6 +140,23 @@ export default abstract class Span {
     if (!this.refs.includes(ref)) {
       this.refs.push(ref);
     }
+    return this;
+  }
+
+  get isAsync(): boolean {
+    return this._async;
+  }
+
+  async(): this {
+    this.context.async(this);
+    this._async = true;
+    return this;
+  }
+
+  await(): this {
+    this.endTime = new Date().getTime();
+    this.context.await(this);
+    this._async = false;
     return this;
   }
 }

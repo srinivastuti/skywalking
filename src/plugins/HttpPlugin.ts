@@ -26,6 +26,7 @@ import Tag from '../Tag';
 import { SpanLayer } from '../proto/language-agent/Tracing_pb';
 import { ContextCarrier } from '../trace/context/ContextCarrier';
 import { createLogger } from '../logging';
+import * as eos from 'end-of-stream';
 
 const logger = createLogger(__filename);
 
@@ -46,7 +47,6 @@ class HttpPlugin implements SwPlugin {
         const argc = arguments.length;
 
         const url: URL | string | RequestOptions = arguments[0];
-        const options = argc > 1 ? (typeof arguments[1] === 'function' ? {} : arguments[1]) : {};
         const callback = typeof arguments[argc - 1] === 'function' ? arguments[argc - 1] : undefined;
 
         const { host, pathname } =
@@ -65,32 +65,19 @@ class HttpPlugin implements SwPlugin {
         span.layer = SpanLayer.HTTP;
         span.tag(Tag.httpURL(host + pathname));
 
-        const snapshot = ContextManager.current.capture();
-
         const request: ClientRequest = original.apply(this, arguments);
 
         span.extract().items.forEach((item) => {
           request.setHeader(item.key, item.value);
         });
 
+        span.async().stop();
+
         request.on('response', (res) => {
-          res.prependListener('end', () => {
-            span.tag(Tag.httpStatusCode(res.statusCode)).tag(Tag.httpStatusMsg(res.statusMessage));
+          span.tag(Tag.httpStatusCode(res.statusCode)).tag(Tag.httpStatusMsg(res.statusMessage));
 
-            const callbackSpan = ContextManager.current.newLocalSpan('callback').start();
-            callbackSpan.layer = SpanLayer.HTTP;
-            callbackSpan.component = Component.HTTP;
-
-            ContextManager.current.restore(snapshot);
-
-            if (callback) {
-              callback(res);
-            }
-
-            callbackSpan.stop();
-          });
+          eos(res, () => span.await());
         });
-        span.stop();
 
         return request;
       };
@@ -123,7 +110,9 @@ class HttpPlugin implements SwPlugin {
         span.layer = SpanLayer.HTTP;
         span.tag(Tag.httpURL(req.url));
 
-        span.tag(Tag.httpStatusCode(res.statusCode)).tag(Tag.httpStatusMsg(res.statusMessage)).stop();
+        span.tag(Tag.httpStatusCode(res.statusCode)).tag(Tag.httpStatusMsg(res.statusMessage)).async().stop();
+
+        eos(res, () => span.await());
 
         return original.apply(this, arguments);
       };
