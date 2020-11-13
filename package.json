@@ -55,6 +55,8 @@
     "worker-loader": "^2.0.0"
   },
   "dependencies": {
+    "@types/end-of-stream": "^1.4.0",
+    "end-of-stream": "^1.4.4",
     "google-protobuf": "^3.12.2",
     "grpc": "^1.10.1",
     "semver": "^7.3.2",
